@@ -1,0 +1,7 @@
+# The repository is text-only by policy (see docs/asset-policy.md).
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+.switchboard/** text=auto eol=lf
+DEV.sh text eol=lf
+DEV.cmd text eol=crlf

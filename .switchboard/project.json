@@ -1,0 +1,7 @@
+{
+  "project": "beachesofvicecity/palmvidev",
+  "main_repo": "BeachesOfViceCity/PalmVIDev",
+  "roots": {},
+  "new_file_policy": "declare",
+  "require_task": "once"
+}

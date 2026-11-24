@@ -1,0 +1,423 @@
+/* Six themes; switch with <html data-theme data-mode>.
+   Keep in sync with that file; Switchboard-only tokens live at the top of style.css. */
+/* ==========================================================================
+   Themes. Every colour, material, shape and type choice comes from these
+   tokens; styles.css only uses them. <html data-theme="…" data-mode="light|dark">.
+   Selectors are attribute-scoped (not :root) so a preview card can carry its
+   own data-theme/data-mode and render that theme in place.
+
+   Material tokens:
+     --surface / --surface-hi   tile & panel fill (resting / focused)
+     --frost                    backdrop-filter for surfaces (none = opaque)
+     --edge                     surface border
+     --raise / --raise-hi       surface shadow (resting / focused)
+     --press                    inset shadow for "on" and pressed states
+     --sheet / --pop            sheets & drawers, and their shadow
+   ========================================================================== */
+
+[data-theme] {
+  --r-card: 12px;
+  --r-ctl: 8px;
+  --r-chip: 6px;
+  --r-btn: var(--r-ctl);
+  --tile-scale: 1.035;
+  --press-scale: 0.97;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* settles with ~1.5% overshoot (the Hearth Home Soft feel) */
+  --spring: linear(0, 0.007, 0.03 2.3%, 0.124 4.9%, 0.68 15.6%, 0.86 20.6%, 0.97 27.3%, 1.012 33.7%, 1.016 39%, 1.006 51.5%, 0.999 69%, 1);
+  --sans: "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --display: "Outfit", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 800;
+  --display-track: -0.01em;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --edge: 1px solid var(--line);
+  --focus-tile: 0 0 0 0 transparent;
+  --live: oklch(0.68 0.2 25);
+  --live-solid: oklch(0.58 0.21 25);
+  --live-wash: oklch(0.68 0.2 25 / 0.16);
+  --ready: oklch(0.8 0.16 152);
+  --wait: oklch(0.83 0.14 78);
+  --on-accent: white;
+}
+
+/* ───────────────────────── Glass ───────────────────────── */
+[data-theme="glass"][data-mode="dark"] {
+  color-scheme: dark;
+  --ground: oklch(0.15 0.018 268);
+  --wash:
+    radial-gradient(48vmax 34vmax at 8% -6%, oklch(0.42 0.14 285 / 0.32), transparent 70%),
+    radial-gradient(40vmax 30vmax at 100% 18%, oklch(0.44 0.1 250 / 0.2), transparent 70%),
+    radial-gradient(46vmax 22vmax at 34% 64%, oklch(0.4 0.13 278 / 0.3), transparent 72%),
+    radial-gradient(44vmax 24vmax at 74% 66%, oklch(0.42 0.12 262 / 0.28), transparent 72%),
+    radial-gradient(50vmax 32vmax at 50% 110%, oklch(0.38 0.12 300 / 0.18), transparent 70%);
+  --ink: oklch(0.96 0.006 280);
+  --ink-2: oklch(0.82 0.014 280);
+  --ink-3: oklch(0.7 0.018 280);
+  --line: oklch(0.82 0.05 285 / 0.13);
+  --line-strong: oklch(0.82 0.05 285 / 0.24);
+  --surface: oklch(0.25 0.03 275 / 0.42);
+  --surface-hi: oklch(0.28 0.035 278 / 0.56);
+  --sheet: oklch(0.19 0.022 272 / 0.9);
+  --sunken: oklch(1 0 0 / 0.045);
+  --hi: oklch(1 0 0 / 0.08);
+  --frost: blur(24px) saturate(180%);
+  --raise: inset 0 1px 0 var(--hi), 0 22px 56px -34px rgb(0 0 0 / 0.7);
+  --raise-hi: var(--raise);
+  --press: inset 0 1px 0 var(--hi);
+  --pop: inset 0 1px 0 var(--hi), 0 40px 90px -40px rgb(0 0 0 / 0.9);
+  --accent: oklch(0.74 0.15 292);
+  --accent-solid: oklch(0.56 0.19 290);
+  --accent-wash: oklch(0.74 0.15 292 / 0.14);
+  --accent-line: oklch(0.74 0.15 292 / 0.55);
+  --flap: oklch(0.11 0.012 270);
+  --flap-hi: oklch(0.17 0.016 270);
+  --flap-ink: oklch(0.97 0.004 90);
+  --scrim: oklch(0.08 0.01 270 / 0.55);
+}
+[data-theme="glass"][data-mode="light"] {
+  color-scheme: light;
+  --ground: oklch(0.965 0.006 280);
+  --wash:
+    radial-gradient(48vmax 34vmax at 8% -6%, oklch(0.78 0.11 290 / 0.28), transparent 70%),
+    radial-gradient(40vmax 30vmax at 100% 18%, oklch(0.84 0.08 230 / 0.26), transparent 70%),
+    radial-gradient(50vmax 32vmax at 50% 110%, oklch(0.82 0.08 310 / 0.18), transparent 70%);
+  --ink: oklch(0.22 0.025 280);
+  --ink-2: oklch(0.4 0.025 280);
+  --ink-3: oklch(0.5 0.022 280);
+  --line: oklch(0.3 0.04 280 / 0.12);
+  --line-strong: oklch(0.3 0.04 280 / 0.22);
+  --surface: oklch(1 0 0 / 0.55);
+  --surface-hi: oklch(1 0 0 / 0.78);
+  --sheet: oklch(0.985 0.004 280 / 0.9);
+  --sunken: oklch(0.3 0.04 280 / 0.05);
+  --hi: oklch(1 0 0 / 0.9);
+  --frost: blur(24px) saturate(180%);
+  --raise: inset 0 1px 0 var(--hi), 0 18px 48px -32px rgb(40 30 90 / 0.28);
+  --raise-hi: var(--raise);
+  --press: inset 0 1px 2px rgb(40 30 90 / 0.08);
+  --pop: inset 0 1px 0 var(--hi), 0 40px 90px -40px rgb(40 30 90 / 0.4);
+  --accent: oklch(0.5 0.2 290);
+  --accent-solid: oklch(0.52 0.21 290);
+  --accent-wash: oklch(0.52 0.21 290 / 0.1);
+  --accent-line: oklch(0.52 0.21 290 / 0.5);
+  --flap: oklch(0.2 0.02 275);
+  --flap-hi: oklch(0.27 0.025 275);
+  --flap-ink: oklch(0.98 0.004 90);
+  --scrim: oklch(0.3 0.03 280 / 0.3);
+  --live: oklch(0.55 0.21 25);
+  --ready: oklch(0.55 0.15 152);
+  --wait: oklch(0.6 0.13 70);
+}
+
+/* ───────────────────────── Hearth (the family TV app's world) ─────────────────────────
+   Near-black, amber brand, Inter, white primary buttons and a white focus ring that
+   reads across a room; posters-on-black depth, no frosted tiles. */
+[data-theme="hearth"] {
+  --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --display: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 750;
+  --display-track: -0.025em;
+  --r-card: 14px;
+  --r-ctl: 10px;
+  --r-btn: 999px;
+  --tile-scale: 1.06;
+  --frost: none;
+  --edge: 1px solid transparent;
+}
+[data-theme="hearth"][data-mode="dark"] {
+  color-scheme: dark;
+  --ground: #0b0b0f;
+  --wash: radial-gradient(60% 40% at 90% 0%, rgb(255 159 67 / 0.07), transparent 70%), radial-gradient(50% 40% at 0% 100%, rgb(255 159 67 / 0.04), transparent 70%);
+  --ink: #f5f5f7;
+  --ink-2: #c7c7cc;
+  --ink-3: #8e8e93;
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --surface: #17171d;
+  --surface-hi: #1f1f27;
+  --sheet: rgb(28 28 34 / 0.96);
+  --sunken: rgb(255 255 255 / 0.06);
+  --hi: rgb(255 255 255 / 0.06);
+  --raise: 0 22px 44px -14px rgb(0 0 0 / 0.72), 0 8px 18px -8px rgb(0 0 0 / 0.5);
+  --raise-hi: 0 30px 60px -16px rgb(0 0 0 / 0.85), 0 10px 22px -8px rgb(0 0 0 / 0.6);
+  --press: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  --pop: 0 30px 80px -10px rgb(0 0 0 / 0.7), 0 0 0 1px var(--line);
+  --focus-tile: 0 0 0 3px #ffffff;
+  --accent: #ff9f43;
+  --accent-solid: #ffffff;
+  --on-accent: #000000;
+  --accent-wash: rgb(255 159 67 / 0.16);
+  --accent-line: #ffffff;
+  --flap: #111116;
+  --flap-hi: #1c1c23;
+  --flap-ink: #ffb86b;
+  --scrim: rgb(0 0 0 / 0.6);
+  --live: #ff453a;
+  --live-solid: #ff453a;
+  --ready: #30d158;
+  --wait: #ffd60a;
+}
+[data-theme="hearth"][data-mode="light"] {
+  color-scheme: light;
+  --ground: #f5f5f7;
+  --wash: radial-gradient(60% 40% at 90% 0%, rgb(255 159 67 / 0.1), transparent 70%);
+  --ink: #1d1d1f;
+  --ink-2: #48484d;
+  --ink-3: #6e6e73;
+  --line: rgb(0 0 0 / 0.08);
+  --line-strong: rgb(0 0 0 / 0.14);
+  --surface: #ffffff;
+  --surface-hi: #ffffff;
+  --sheet: rgb(255 255 255 / 0.97);
+  --sunken: rgb(0 0 0 / 0.045);
+  --hi: rgb(255 255 255 / 1);
+  --raise: 0 18px 36px -18px rgb(0 0 0 / 0.22), 0 4px 10px -6px rgb(0 0 0 / 0.12);
+  --raise-hi: 0 26px 50px -18px rgb(0 0 0 / 0.3), 0 6px 14px -6px rgb(0 0 0 / 0.16);
+  --press: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+  --pop: 0 30px 80px -20px rgb(0 0 0 / 0.3), 0 0 0 1px var(--line);
+  --focus-tile: 0 0 0 3px #1d1d1f;
+  --accent: #c76a12;
+  --accent-solid: #1d1d1f;
+  --on-accent: #ffffff;
+  --accent-wash: rgb(255 159 67 / 0.16);
+  --accent-line: #1d1d1f;
+  --flap: #1d1d22;
+  --flap-hi: #2a2a31;
+  --flap-ink: #ffb86b;
+  --scrim: rgb(0 0 0 / 0.3);
+  --live: #e0352b;
+  --ready: #1f9d45;
+  --wait: #b88700;
+}
+
+/* ───────────────────────── Soft (neumorphism; the Hearth Home Soft recipe) ─────────────────────────
+   One material: every raised or carved edge is the base colour mixed lighter or darker. "On"
+   is pressed in with a colour wash, never a glow. Amber accent, Outfit + Figtree. */
+[data-theme="soft"] {
+  --sans: "Figtree", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --display: "Outfit", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 700;
+  --display-track: -0.015em;
+  --r-card: 22px;
+  --r-ctl: 14px;
+  --r-chip: 12px;
+  --r-btn: 14px;
+  --tile-scale: 1.02;
+  --frost: none;
+  --edge: 0 solid transparent;
+  --surface: var(--base);
+  --surface-hi: var(--base);
+  --sheet: var(--base);
+  --sunken: var(--base);
+  --raise: -7px -7px 16px var(--mhi), 9px 9px 20px var(--mlo);
+  --raise-hi: -10px -10px 22px var(--mhi), 13px 13px 28px var(--mlo);
+  --press: inset 4px 4px 10px var(--mlo), inset -4px -4px 10px var(--mhi);
+  --pop: -12px -12px 30px var(--mhi), 18px 18px 40px var(--mlo);
+  --line: color-mix(in oklab, var(--base), var(--ink-mix) 10%);
+  --line-strong: color-mix(in oklab, var(--base), var(--ink-mix) 18%);
+  --hi: transparent;
+  --wash: none;
+  --ground: var(--base);
+  --flap: var(--base);
+  --flap-hi: var(--base);
+}
+[data-theme="soft"][data-mode="dark"] {
+  color-scheme: dark;
+  --base: color-mix(in oklab, #2a2a2f, #ffd9b8 9%);
+  --mhi: color-mix(in oklab, var(--base), white 9%);
+  --mlo: color-mix(in oklab, var(--base), black 46%);
+  --ink-mix: white;
+  --ink: #f1ede8;
+  --ink-2: #cfc9c2;
+  --ink-3: #a59e97;
+  --accent: #f2a04a;
+  --accent-solid: #f2a04a;
+  --on-accent: #1a1206;
+  --accent-wash: color-mix(in oklab, var(--base), #f2a04a 22%);
+  --accent-line: #f2a04a;
+  --flap-ink: #f6e9da;
+  --scrim: rgb(10 8 6 / 0.45);
+}
+[data-theme="soft"][data-mode="light"] {
+  color-scheme: light;
+  --base: color-mix(in oklab, #f1eeea, #ffd9b8 10%);
+  --mhi: color-mix(in oklab, var(--base), white 72%);
+  --mlo: color-mix(in oklab, var(--base), #6b5a4a 24%);
+  --ink-mix: #2e2a28;
+  --ink: #2e2a28;
+  --ink-2: #5a524c;
+  --ink-3: #7a716a;
+  --accent: #c9660f;
+  --accent-solid: #c9660f;
+  --on-accent: #ffffff;
+  --accent-wash: color-mix(in oklab, var(--base), #f2a04a 26%);
+  --accent-line: #c9660f;
+  --flap-ink: #3a332e;
+  --scrim: rgb(60 48 40 / 0.18);
+  --live: #c63b2c;
+  --ready: #2f8f57;
+  --wait: #a87400;
+}
+
+/* ───────────────────────── Graphite (crisp monochrome, tool-like) ───────────────────────── */
+[data-theme="graphite"] {
+  --r-card: 10px;
+  --r-ctl: 6px;
+  --r-chip: 4px;
+  --tile-scale: 1;
+  --frost: none;
+  --display: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --display-track: -0.025em;
+}
+[data-theme="graphite"][data-mode="dark"] {
+  color-scheme: dark;
+  --ground: #0a0a0a;
+  --wash: none;
+  --ink: #ededed;
+  --ink-2: #b4b4b4;
+  --ink-3: #8f8f8f;
+  --line: #262626;
+  --line-strong: #3a3a3a;
+  --surface: #111111;
+  --surface-hi: #161616;
+  --sheet: #111111;
+  --sunken: #1a1a1a;
+  --hi: transparent;
+  --raise: none;
+  --raise-hi: none;
+  --press: inset 0 0 0 1px #3a3a3a;
+  --pop: 0 30px 80px -30px rgb(0 0 0 / 0.9), 0 0 0 1px #262626;
+  --focus-tile: 0 0 0 1px #ededed;
+  --accent: #ededed;
+  --accent-solid: #ededed;
+  --on-accent: #0a0a0a;
+  --accent-wash: rgb(255 255 255 / 0.06);
+  --accent-line: #ededed;
+  --flap: #141414;
+  --flap-hi: #1c1c1c;
+  --flap-ink: #ededed;
+  --scrim: rgb(0 0 0 / 0.7);
+}
+[data-theme="graphite"][data-mode="light"] {
+  color-scheme: light;
+  --ground: #ffffff;
+  --wash: none;
+  --ink: #171717;
+  --ink-2: #4d4d4d;
+  --ink-3: #6f6f6f;
+  --line: #e5e5e5;
+  --line-strong: #cfcfcf;
+  --surface: #ffffff;
+  --surface-hi: #fafafa;
+  --sheet: #ffffff;
+  --sunken: #f5f5f5;
+  --hi: transparent;
+  --raise: none;
+  --raise-hi: none;
+  --press: inset 0 0 0 1px #cfcfcf;
+  --pop: 0 30px 80px -30px rgb(0 0 0 / 0.25), 0 0 0 1px #e5e5e5;
+  --focus-tile: 0 0 0 1px #171717;
+  --accent: #171717;
+  --accent-solid: #171717;
+  --on-accent: #ffffff;
+  --accent-wash: rgb(0 0 0 / 0.05);
+  --accent-line: #171717;
+  --flap: #171717;
+  --flap-hi: #262626;
+  --flap-ink: #fafafa;
+  --scrim: rgb(0 0 0 / 0.25);
+  --live: #dc2626;
+  --ready: #16a34a;
+  --wait: #b45309;
+}
+
+/* ───────────────────────── Aurora (vivid liquid glass) ───────────────────────── */
+[data-theme="aurora"] {
+  color-scheme: dark;
+  --r-card: 20px;
+  --r-ctl: 12px;
+  --r-btn: 12px;
+  --tile-scale: 1.04;
+  --ground: #070814;
+  --wash:
+    radial-gradient(55vmax 40vmax at 10% 0%, oklch(0.62 0.22 300 / 0.55), transparent 65%),
+    radial-gradient(50vmax 40vmax at 95% 25%, oklch(0.7 0.17 210 / 0.45), transparent 65%),
+    radial-gradient(60vmax 40vmax at 40% 105%, oklch(0.68 0.2 350 / 0.4), transparent 65%),
+    radial-gradient(40vmax 30vmax at 70% 60%, oklch(0.75 0.18 160 / 0.22), transparent 70%);
+  --ink: #ffffff;
+  --ink-2: rgb(255 255 255 / 0.82);
+  --ink-3: rgb(255 255 255 / 0.66);
+  --line: rgb(255 255 255 / 0.18);
+  --line-strong: rgb(255 255 255 / 0.32);
+  --surface: rgb(255 255 255 / 0.1);
+  --surface-hi: rgb(255 255 255 / 0.17);
+  --sheet: rgb(20 18 40 / 0.72);
+  --sunken: rgb(255 255 255 / 0.08);
+  --hi: rgb(255 255 255 / 0.35);
+  --frost: blur(32px) saturate(220%) brightness(1.08);
+  --raise: inset 0 1px 0 var(--hi), inset 0 -1px 0 rgb(255 255 255 / 0.06), 0 24px 60px -30px rgb(0 0 0 / 0.6);
+  --raise-hi: inset 0 1px 0 var(--hi), inset 0 -1px 0 rgb(255 255 255 / 0.1), 0 30px 70px -30px rgb(0 0 0 / 0.7);
+  --press: inset 0 1px 2px rgb(0 0 0 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  --pop: inset 0 1px 0 var(--hi), 0 50px 100px -40px rgb(0 0 0 / 0.8);
+  --accent: oklch(0.86 0.13 200);
+  --accent-solid: oklch(0.92 0.09 195);
+  --on-accent: #06121a;
+  --accent-wash: rgb(140 230 255 / 0.16);
+  --accent-line: oklch(0.86 0.13 200 / 0.8);
+  --flap: rgb(10 10 28 / 0.55);
+  --flap-hi: rgb(30 30 60 / 0.55);
+  --flap-ink: #ffffff;
+  --scrim: rgb(5 5 20 / 0.45);
+}
+
+/* ───────────────────────── Signal (show-day high contrast) ─────────────────────────
+   Black, big type, tally colours only; meets AAA contrast. For dark control rooms. */
+[data-theme="signal"] {
+  color-scheme: dark;
+  --r-card: 6px;
+  --r-ctl: 4px;
+  --r-chip: 3px;
+  --tile-scale: 1;
+  --frost: none;
+  --display: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 700;
+  --ground: #000000;
+  --wash: none;
+  --ink: #ffffff;
+  --ink-2: #e6e6e6;
+  --ink-3: #c2c2c2;
+  --line: #4d4d4d;
+  --line-strong: #8a8a8a;
+  --edge: 2px solid #4d4d4d;
+  --surface: #000000;
+  --surface-hi: #0d0d0d;
+  --sheet: #000000;
+  --sunken: #141414;
+  --hi: transparent;
+  --raise: none;
+  --raise-hi: none;
+  --press: inset 0 0 0 2px #ffffff;
+  --pop: 0 0 0 2px #ffffff;
+  --focus-tile: 0 0 0 3px #ffd60a;
+  --accent: #ffd60a;
+  --accent-solid: #ffd60a;
+  --on-accent: #000000;
+  --accent-wash: rgb(255 214 10 / 0.16);
+  --accent-line: #ffd60a;
+  --flap: #000000;
+  --flap-hi: #000000;
+  --flap-ink: #ffffff;
+  --scrim: rgb(0 0 0 / 0.75);
+  --live: #ff3b30;
+  --live-solid: #d70015;
+  --ready: #30d158;
+  --wait: #ffd60a;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-theme] { --frost: none; }
+  [data-theme="glass"][data-mode="dark"], [data-theme="aurora"] { --surface: oklch(0.22 0.025 272); --sheet: oklch(0.19 0.022 272); }
+  [data-theme="glass"][data-mode="light"] { --surface: #ffffff; --sheet: #ffffff; }
+}

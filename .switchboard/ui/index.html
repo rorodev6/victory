@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en" data-theme="hearth" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>Switchboard</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<script src="theme-init.js"></script>
+<link rel="stylesheet" href="themes.css">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body data-view="board" class="booting">
+
+<header class="top">
+  <div class="brand" id="brand"><span>Switchboard <small id="brand-name" hidden></small></span></div>
+  <label class="proj">
+    <span class="sr">Project</span>
+    <select id="project" aria-label="Project"></select>
+  </label>
+  <button id="main-repo" class="chip repo" type="button" hidden></button>
+  <div class="stats" aria-live="polite">
+    <div class="stat"><b id="st-live"></b><span>live</span></div>
+    <div class="stat"><b id="st-prog"></b><span>in progress</span></div>
+    <div class="stat"><b id="st-done"></b><span>done today</span></div>
+  </div>
+  <div class="spacer"></div>
+  <div id="protocol" class="chip proto" tabindex="0"></div>
+  <div id="conn" class="chip conn" data-state="connecting" role="status"><i></i><span>Connecting</span></div>
+  <button id="me" class="chip me" type="button" aria-haspopup="menu" hidden></button>
+</header>
+
+<main class="grid">
+  <section class="pane roster" id="pane-roster" aria-label="Agents">
+    <div class="pane-head">
+      <h2>Agents</h2>
+      <span class="count" id="roster-count"></span>
+    </div>
+    <div class="pane-body" id="roster-body">
+      <div id="roster-live" class="roster-list"></div>
+      <div id="roster-empty" class="empty" hidden>No agents yet. A Claude Code session shows up here the moment it joins.</div>
+      <button id="offline-toggle" class="group-toggle" type="button" aria-expanded="false" hidden></button>
+      <div id="roster-off" class="roster-list off" hidden></div>
+    </div>
+  </section>
+
+  <section class="pane board" id="pane-board" aria-label="Task board">
+    <div class="pane-head">
+      <div class="seg view-seg" id="view-seg" role="tablist" aria-label="Board view">
+        <span class="pill"></span>
+        <button type="button" role="tab" data-cv="streams" aria-selected="true">Workstreams</button>
+        <button type="button" role="tab" data-cv="status" aria-selected="false">Status</button>
+      </div>
+      <span class="count" id="board-count"></span>
+      <div class="spacer"></div>
+      <button id="add-tasks" class="btn primary sm" type="button" data-edit></button>
+    </div>
+    <div class="streams" id="streams" aria-live="polite"></div>
+    <div class="cols" id="cols" hidden></div>
+  </section>
+
+  <section class="pane side" id="pane-side" aria-label="Channel and details">
+    <div class="area-bar" id="area-bar" hidden></div>
+    <div class="tabs seg" role="tablist" id="side-tabs">
+      <span class="pill" id="tab-ind"></span>
+      <button role="tab" data-tab="channel" aria-selected="true">Channel</button>
+      <button role="tab" data-tab="files" aria-selected="false">Files <span class="tcount" id="tc-files"></span></button>
+      <button role="tab" data-tab="build" aria-selected="false">Build list <span class="tcount" id="tc-build"></span></button>
+      <button role="tab" data-tab="contracts" aria-selected="false">Contracts <span class="tcount" id="tc-contracts"></span></button>
+      <button role="tab" data-tab="activity" aria-selected="false">Activity</button>
+    </div>
+
+    <div class="tabpanel" data-panel="channel">
+      <div class="qbar" id="qbar" hidden>
+        <button id="qfilter" type="button" class="qbtn" aria-pressed="false"></button>
+      </div>
+      <div class="feed" id="feed" aria-live="polite"></div>
+      <button id="jump" class="jump" type="button" hidden>New activity</button>
+      <form class="composer" id="composer" data-edit autocomplete="off">
+        <div class="c-row">
+          <select id="c-to" aria-label="Send to"></select>
+          <select id="c-kind" aria-label="Message kind">
+            <option value="chat">Chat</option>
+            <option value="question">Question</option>
+            <option value="answer">Answer</option>
+            <option value="decision">Decision</option>
+            <option value="alert">Alert</option>
+          </select>
+          <span class="c-reply" id="c-reply" hidden></span>
+        </div>
+        <div class="c-input">
+          <textarea id="c-body" rows="1" maxlength="4000" placeholder="Message the team" aria-label="Message"></textarea>
+          <button class="send" id="c-send" type="submit" aria-label="Send"></button>
+        </div>
+      </form>
+    </div>
+
+    <div class="tabpanel" data-panel="files" hidden>
+      <div class="panel-scroll" id="files"></div>
+    </div>
+    <div class="tabpanel" data-panel="build" hidden>
+      <div class="panel-scroll" id="build"></div>
+    </div>
+    <div class="tabpanel" data-panel="contracts" hidden>
+      <div class="panel-scroll" id="contracts"></div>
+    </div>
+    <div class="tabpanel" data-panel="activity" hidden>
+      <div class="panel-scroll log" id="activity"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="mnav" id="mnav" aria-label="Views">
+  <button type="button" data-view="roster">Agents</button>
+  <button type="button" data-view="board">Board</button>
+  <button type="button" data-view="side">Channel</button>
+</nav>
+
+<div id="pop" class="pop" role="menu" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<aside id="drawer" class="drawer" aria-modal="true" role="dialog" aria-labelledby="drawer-title" hidden>
+  <div class="drawer-scrim" data-close></div>
+  <div class="drawer-sheet">
+    <div class="drawer-head">
+      <h2 id="drawer-title"></h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close" id="drawer-x"></button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+</aside>
+
+<section id="gate" class="gate" hidden>
+  <div class="gate-card" id="gate-card">
+    <div id="gate-signin">
+      <h1>Sign in to Switchboard</h1>
+      <p class="muted">Live coordination for your team and its agents.</p>
+      <a class="btn primary wide" href="sso/start" id="sso" hidden>Single sign-on</a>
+      <div class="or"><span>or</span></div>
+      <form id="token-form" autocomplete="off">
+        <label for="token-input">Personal access token</label>
+        <input id="token-input" type="password" spellcheck="false" autocomplete="off" required>
+        <p id="token-err" class="err" hidden></p>
+        <button class="btn wide" type="submit">Continue</button>
+      </form>
+    </div>
+    <div id="gate-denied" hidden>
+      <h1>Not on the list yet</h1>
+      <p class="muted">Your account isn't on the Switchboard allowlist. Ask an admin to add you, then sign in again.</p>
+      <button class="btn wide" type="button" id="gate-switch">Use a different account</button>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

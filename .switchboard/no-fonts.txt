@@ -1,0 +1,1 @@
+Text-only install: no font files (init --no-fonts). Delete this file and re-run init to restore them.

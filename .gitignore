@@ -76,3 +76,7 @@
 *.swp
 Thumbs.db
 .DS_Store
+
+# play.ps1: per-run logs and the remembered game path (contain local paths)
+/logs/
+/play.local.txt

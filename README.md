@@ -58,6 +58,23 @@ The internal render size comes from a pair of globals the title fills (width at 
 `0x1499fecfc` of `game_scarlett_master.exe` 1.0.2.1, preferred base); the render-target setup function at `0x141edb000`
 reads them. Lowering the render size at run time from there is the open lead.
 
+## Easiest way: ask an AI assistant
+
+Open this folder in an AI coding assistant (Claude Code, Codex, Cursor, Copilot...) and ask, for example:
+*"Set this up and launch my game, it is at D:\Games\GTA VI\game_scarlett_master.exe"* or
+*"The game crashed, look at my err.txt and fix it"*. The assistant follows [AGENTS.md](AGENTS.md).
+
+## Launching and logs
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\play.ps1 -Game "<path to game_scarlett_master.exe>"
+```
+
+Every run writes `logs\<date_time>\err.txt`. When reporting a crash, attach the end of that file (replace your
+Windows user name in paths) in an [issue](https://github.com/rorodev6/victory/issues).
+
+**Windows 10:** not supported yet: its Direct3D 12 lacks Shader Model 6.6, which the game needs (see AGENTS.md).
+
 ## Build
 
 ```powershell

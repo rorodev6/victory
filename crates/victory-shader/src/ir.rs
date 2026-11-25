@@ -817,6 +817,151 @@ fn lookup(outs: &[(Reg, Value)], reg: Reg) -> Value {
         .map_or(NONE, |i| outs[i].1)
 }
 
+/// A pixel program without its waits for the waves it overlaps: POPS, the console's
+/// rasterizer-ordered views. Before the accesses it wants in primitive order, the program
+/// loops (`s_sleep`) until `src_pops_exiting_wave_id` says the overlapping waves have left
+/// that section. On the host the views themselves are ordered (the lowering makes them
+/// rasterizer-ordered views), so every way into such a loop goes past it instead. Only a
+/// loop of scalar instructions of which nothing is read after it. `None` if the program has
+/// no such loop.
+pub(crate) fn without_pops_wait(p: &Program) -> Option<Program> {
+    use crate::gfx10::{Fields, Operand};
+    /// `src_pops_exiting_wave_id`, a scalar source.
+    const EXITING: u8 = 239;
+    let reads_exiting = |i: &Inst| {
+        matches!(&i.fields, Fields::Sop { src, .. }
+            if src.iter().any(|o| matches!(o, Operand::Const(EXITING))))
+    };
+    let scalar = |i: &Inst| matches!(i.fields, Fields::Sop { .. } | Fields::Sopp { .. });
+    // values read outside block `l`, directly or through joins outside it
+    let read_outside = |l: usize| {
+        let others = || {
+            p.blocks
+                .iter()
+                .enumerate()
+                .filter(move |&(b, _)| b != l)
+                .map(|(_, block)| block)
+        };
+        let mut read: std::collections::HashSet<Value> = others()
+            .flat_map(|block| &block.insts)
+            .flat_map(|inst| &inst.reads)
+            .map(|r| r.1)
+            .collect();
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for phi in others().flat_map(|block| &block.phis) {
+                if read.contains(&phi.value) {
+                    for &a in &phi.args {
+                        changed |= read.insert(a);
+                    }
+                }
+            }
+        }
+        read
+    };
+    let mut blocks = p.blocks.clone();
+    let mut any = false;
+    for (l, block) in p.blocks.iter().enumerate() {
+        let Exit::Branch { taken, not_taken } = block.exit else {
+            continue;
+        };
+        let past = match (taken == l, not_taken == l) {
+            (true, false) => not_taken,
+            (false, true) => taken,
+            _ => continue,
+        };
+        if !block.insts.iter().any(reads_exiting) || !block.insts.iter().all(scalar) {
+            continue;
+        }
+        let read = read_outside(l);
+        let written = block.insts.iter().flat_map(|i| &i.writes).map(|w| w.1);
+        if written.chain(block.phis.iter().map(|phi| phi.value)).any(|v| read.contains(&v)) {
+            continue;
+        }
+        for &q in block.preds.iter().filter(|&&q| q != l) {
+            let before = &mut blocks[q];
+            match before.exit {
+                Exit::Jump(_) => before.exit = Exit::Jump(past),
+                // a branch around the wait (taken when no wave is to be waited for) has
+                // nothing left to decide
+                Exit::Branch { taken, not_taken } => {
+                    let to = |t: usize| if t == l { past } else { t };
+                    before.exit = match (to(taken), to(not_taken)) {
+                        (t, n) if t == n => {
+                            before.insts.pop();
+                            Exit::Jump(t)
+                        }
+                        (taken, not_taken) => Exit::Branch { taken, not_taken },
+                    };
+                }
+                _ => unreachable!("a way into a loop"),
+            }
+        }
+        // (no way in is left; it leads nowhere either)
+        blocks[l].insts.clear();
+        blocks[l].exit = Exit::End;
+        any = true;
+    }
+    if !any {
+        return None;
+    }
+    for block in &mut blocks {
+        block.phis.clear();
+    }
+    link(&mut blocks);
+    split_irreducible(&mut blocks).ok()?;
+    Some(rename(blocks, p.wave64, p.vgprs))
+}
+
+/// Each of `joins` copied for every way into it but the first, each copy entered from its own
+/// predecessor and left as the join is: a value the join merged from its ways in is one
+/// value in each copy. Every instruction still runs once on each path. A loop header (a
+/// block with a way in from later in reverse postorder) is left as it is. `None` if nothing
+/// changes.
+pub(crate) fn split_joins(p: &Program, joins: &[usize]) -> Option<Program> {
+    let order = reverse_postorder(&p.blocks);
+    let mut index = vec![usize::MAX; p.blocks.len()];
+    for (n, &b) in order.iter().enumerate() {
+        index[b] = n;
+    }
+    let mut blocks = p.blocks.clone();
+    for block in &mut blocks {
+        block.phis.clear();
+    }
+    let mut any = false;
+    for &join in joins {
+        let mut preds = p.blocks[join].preds.clone();
+        preds.dedup();
+        if preds.len() < 2 || preds.iter().any(|&q| index[q] >= index[join]) {
+            continue;
+        }
+        for &pred in &preds[1..] {
+            let target = blocks.len();
+            blocks.push(blocks[join].clone());
+            match &mut blocks[pred].exit {
+                Exit::Jump(t) => *t = target,
+                Exit::Branch { taken, not_taken } => {
+                    if *taken == join {
+                        *taken = target;
+                    }
+                    if *not_taken == join {
+                        *not_taken = target;
+                    }
+                }
+                _ => unreachable!("a way into a join"),
+            }
+        }
+        any = true;
+    }
+    if !any {
+        return None;
+    }
+    link(&mut blocks);
+    split_irreducible(&mut blocks).ok()?;
+    Some(rename(blocks, p.wave64, p.vgprs))
+}
+
 pub(crate) fn reverse_postorder(blocks: &[Block]) -> Vec<usize> {
     let mut seen = vec![false; blocks.len()];
     let mut post = Vec::with_capacity(blocks.len());

@@ -566,7 +566,19 @@ impl HostPipeline {
             return refuse("graphics state not kept (plain description)", shaders);
         };
         let state = g.describe();
-        if mesh.is_some() {
+        if let Some(ms) = mesh {
+            // A mesh program whose outputs pass D3D12's 32 KiB is linked with this pixel
+            // program ([`linked`]): the pipeline gets the two made for each other, which bind
+            // as the shared translations do.
+            let pair = stages.get(1).and_then(|(ps, _)| linked(ms, ps));
+            let bytecode = |dxil: &[u8]| D3D12_SHADER_BYTECODE {
+                pShaderBytecode: dxil.as_ptr().cast(),
+                BytecodeLength: dxil.len(),
+            };
+            let (ms_code, ps_code) = match &pair {
+                Some(pair) => (bytecode(&pair.0.dxil), bytecode(&pair.1.dxil)),
+                None => (code(0), code(1)),
+            };
             // "triangles": the stream names its topology since it did not
             // load from the library without one (see `mesh_pipeline`); a
             // new name keeps such entries, stored before, from being
@@ -574,13 +586,13 @@ impl HostPipeline {
             let name = super::library::name(
                 "mesh triangles",
                 &root_blob,
-                &[&code_bytes(&code(0)), &code_bytes(&code(1))],
+                &[&code_bytes(&ms_code), &code_bytes(&ps_code)],
                 &state,
             );
             let made = if g.bounds && depth_bounds_test() {
-                bounds_pipeline(&host.device, &root, [none(), none(), code(0), code(1)], g, &name)
+                bounds_pipeline(&host.device, &root, [none(), none(), ms_code, ps_code], g, &name)
             } else {
-                mesh_pipeline(&host.device, &root, code(0), code(1), g, &name)
+                mesh_pipeline(&host.device, &root, ms_code, ps_code, g, &name)
             };
             let pso = match made {
                 Ok(pso) => pso,
@@ -746,6 +758,61 @@ impl HostPipeline {
             },
         })
     }
+}
+
+/// The mesh program `ms` and the pixel program `ps` translated for one pipeline
+/// ([`victory_shader::emit::link_mesh`], from fxceless/victory-fork#854), when `ms`'s outputs
+/// pass D3D12's 32 KiB as it is translated alone: the title's pedestrian, vehicle and prop
+/// transforms declare 65 to 71 output components for 128 vertices. NVIDIA's driver builds such
+/// pipelines anyway; AMD's refuses them (E_INVALIDARG), and the character's body is not drawn.
+/// Linked, the mesh program writes only the outputs `ps` reads and `ps` declares only the
+/// inputs it reads. Made once per pair; `None` when `ms` fits or the pair does not link (the
+/// pipeline is then made of the shared translations, as before). `VICTORY_MESH_LINK=0` turns
+/// it off.
+fn linked(
+    ms: &Arc<Shader>,
+    ps: &Arc<Shader>,
+) -> Option<Arc<(victory_shader::emit::HostShader, victory_shader::emit::HostShader)>> {
+    type Pair = Option<Arc<(victory_shader::emit::HostShader, victory_shader::emit::HostShader)>>;
+    static PAIRS: std::sync::Mutex<Option<std::collections::HashMap<(String, String), Pair>>> =
+        std::sync::Mutex::new(None);
+    if std::env::var_os("VICTORY_MESH_LINK").is_some_and(|v| v == "0") {
+        return None;
+    }
+    let (tm, tp) = (ms.translated()?, ps.translated()?);
+    if victory_shader::emit::mesh_fits(&tm.host.dxil).unwrap_or(true) {
+        return None;
+    }
+    let key = (ms.hash.clone(), ps.hash.clone());
+    if let Some(pair) = PAIRS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get_or_insert_with(Default::default)
+        .get(&key)
+    {
+        return pair.clone();
+    }
+    // (translated outside the lock: two workers on one pair translate it twice at worst)
+    let pair = match victory_shader::emit::link_mesh(&ms.container, &tm.host, &ps.container, &tp.host) {
+        Ok(Some(pair)) => {
+            tracing::info!(mesh = %ms.hash, pixel = %ps.hash, "mesh outputs over 32 KiB: the pair is linked for its pipeline");
+            Some(Arc::new(pair))
+        }
+        Ok(None) => {
+            tracing::warn!(mesh = %ms.hash, pixel = %ps.hash, "mesh outputs over 32 KiB, and the pair does not link");
+            None
+        }
+        Err(e) => {
+            tracing::warn!(mesh = %ms.hash, pixel = %ps.hash, error = %e, "mesh outputs over 32 KiB, and the pair does not translate linked");
+            None
+        }
+    };
+    PAIRS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get_or_insert_with(Default::default)
+        .insert(key, pair.clone());
+    pair
 }
 
 /// A mesh pipeline from the title's graphics state: the pipeline-state

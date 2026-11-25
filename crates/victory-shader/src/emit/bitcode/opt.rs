@@ -67,6 +67,8 @@ pub(crate) struct Usage {
     pub int64: bool,
     /// A typed load of several components from a UAV.
     pub typed_uav_loads: bool,
+    /// A handle annotated as a rasterizer-ordered view.
+    pub rovs: bool,
     /// A handle from the view heap.
     pub heap_views: bool,
     /// A handle from the sampler heap.
@@ -1009,6 +1011,8 @@ impl Module {
                         Some((_, 0)) => u.heap_views = true,
                         _ => u.heap_samplers = true,
                     }
+                } else if name == "annotateHandle" {
+                    u.rovs |= annotation(V::Inst(i)).is_some_and(|(kind, _)| kind & 0x2000 != 0);
                 } else if name.starts_with("atomic") && name.ends_with(".i64") {
                     u.atomic64 = true;
                 } else if name.starts_with("textureLoad") || name.starts_with("bufferLoad") {

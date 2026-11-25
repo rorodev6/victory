@@ -738,6 +738,15 @@ impl Flights {
 /// read, could undo that write. (The merge of a waited-for submission
 /// stores every byte of a differing stretch back into the copy.)
 fn merge_piece(now: &[u8], held: &mut [u8], title: &mut [u8]) -> bool {
+    #[cfg(target_arch = "x86_64")]
+    if std::arch::is_x86_feature_detected!("avx2") {
+        // SAFETY: `is_x86_feature_detected!("avx2")` confirmed AVX2 support.
+        return unsafe { merge_piece_avx2(now, held, title) };
+    }
+    merge_piece_scalar(now, held, title)
+}
+
+fn merge_piece_scalar(now: &[u8], held: &mut [u8], title: &mut [u8]) -> bool {
     let mut differs = 0u8;
     for ((n, h), t) in now.iter().zip(held.iter_mut()).zip(title.iter_mut()) {
         let wrote = if *n != *h { 0xffu8 } else { 0 };
@@ -747,6 +756,44 @@ fn merge_piece(now: &[u8], held: &mut [u8], title: &mut [u8]) -> bool {
         *h = (*h & !wrote) | (*n & wrote);
     }
     differs != 0
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn merge_piece_avx2(now: &[u8], held: &mut [u8], title: &mut [u8]) -> bool {
+    use std::arch::x86_64::*;
+
+    let len = now.len().min(held.len()).min(title.len());
+    let mut i = 0;
+    let mut diff_acc = _mm256_setzero_si256();
+    let np = now.as_ptr();
+    let hp = held.as_mut_ptr();
+    let tp = title.as_mut_ptr();
+
+    while i + 32 <= len {
+        // SAFETY: `i + 32 <= len` guarantees all three 32-byte unaligned accesses
+        // are within bounds of `now`, `held`, and `title`.
+        unsafe {
+            let v_n = _mm256_loadu_si256(np.add(i).cast::<__m256i>());
+            let v_h = _mm256_loadu_si256(hp.add(i).cast::<__m256i>());
+            let eq = _mm256_cmpeq_epi8(v_n, v_h);
+            // Skip untouched 32-byte chunks completely (2 DRAM streams instead of 5).
+            if _mm256_movemask_epi8(eq) != -1 {
+                let v_t = _mm256_loadu_si256(tp.add(i).cast::<__m256i>());
+                let merged = _mm256_blendv_epi8(v_n, v_t, eq);
+                diff_acc = _mm256_or_si256(diff_acc, _mm256_xor_si256(merged, v_t));
+                _mm256_storeu_si256(tp.add(i).cast::<__m256i>(), merged);
+                _mm256_storeu_si256(hp.add(i).cast::<__m256i>(), v_n);
+            }
+        }
+        i += 32;
+    }
+
+    let mut differs = _mm256_testz_si256(diff_acc, diff_acc) == 0;
+    if i < len {
+        differs |= merge_piece_scalar(&now[i..len], &mut held[i..len], &mut title[i..len]);
+    }
+    differs
 }
 
 /// `[from, to)` without the ranges of `skip`, in order.
@@ -1214,7 +1261,39 @@ fn last_difference(a: &[u8], b: &[u8]) -> Option<usize> {
 
 #[cfg(test)]
 mod difference_tests {
-    use super::{first_difference, last_difference};
+    use super::{first_difference, last_difference, merge_piece, merge_piece_scalar};
+
+    #[test]
+    fn merge_piece_matches_scalar_across_lengths() {
+        let mut seed = 0x1234_5678_9abc_def0u64;
+        let mut next_u8 = || -> u8 {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (seed >> 32) as u8
+        };
+        for len in [0usize, 1, 7, 15, 31, 32, 33, 63, 64, 65, 127, 256, 4096] {
+            let held: Vec<u8> = (0..len).map(|_| next_u8()).collect();
+            let mut now = held.clone();
+            let mut title = held.clone();
+            for k in 0..len {
+                let r = next_u8();
+                if r < 20 {
+                    now[k] = now[k].wrapping_add(1);
+                }
+                if (r & 0xF0) == 0x20 {
+                    title[k] = title[k].wrapping_add(5);
+                }
+            }
+            let (mut h1, mut t1) = (held.clone(), title.clone());
+            let (mut h2, mut t2) = (held.clone(), title.clone());
+            assert_eq!(
+                merge_piece_scalar(&now, &mut h1, &mut t1),
+                merge_piece(&now, &mut h2, &mut t2),
+            );
+            assert_eq!((&h1, &t1), (&h2, &t2));
+        }
+    }
 
     /// The chunk searches agree with a byte-wise scan across chunk boundaries.
     #[test]

@@ -18,7 +18,7 @@ if (-not (Test-Path $Game)) { throw "Game executable not found: $Game" }
 Set-Content -Path $remember -Value $Game -Encoding utf8
 
 $build = if ($Release) { 'release' } else { 'diag' }
-$exe = Join-Path $root "target\$profile\victory.exe"
+$exe = Join-Path $root "target\$build\victory.exe"
 if (-not (Test-Path $exe)) {
     throw "Not built yet: $exe. Build first: cargo build --profile diag -p victory --features diagnostics"
 }

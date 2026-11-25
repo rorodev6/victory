@@ -80,3 +80,4 @@ Thumbs.db
 # play.ps1
 /logs/
 /play.local.txt
+/play.local.warm
